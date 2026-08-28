@@ -5,6 +5,7 @@
 #include <gw/fat.h>
 #include <gw/ata.h>
 #include <gw/ahci.h>
+#include <gw/nvme.h>
 #include <gw/serial.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -63,12 +64,15 @@ static void print_83(const char name[11]) {
 }
 
 static int use_ahci;
+static int use_nvme;
 
 static int read_abs(uint32_t lba, void *buf) {
+    if (use_nvme) return nvme_read(lba, 1, buf);
     if (use_ahci) return ahci_read(lba, 1, buf);
     return ata_read_sectors(lba, 1, buf);
 }
 static int write_abs(uint32_t lba, const void *buf) {
+    if (use_nvme) return nvme_write(lba, 1, buf);
     if (use_ahci) return ahci_write(lba, 1, buf);
     return ata_write_sectors(lba, 1, buf);
 }
@@ -245,7 +249,17 @@ static int resolve_full(const char *path, uint32_t *cl, uint32_t *sz, int *isdir
 int fat_mount(void) {
     mounted = 0;
     use_ahci = 0;
-    /* Prefer AHCI on modern hardware; fall back to legacy ATA PIO */
+    use_nvme = 0;
+    /* Prefer NVMe, then AHCI, then ATA PIO */
+    if (nvme_init() == 0) {
+        use_nvme = 1;
+        if (read_abs(0, sector) == 0) {
+            serial_write("FAT: using NVMe backend\n");
+            goto have_mbr;
+        }
+        serial_write("FAT: NVMe present but LBA0 failed\n");
+        use_nvme = 0;
+    }
     if (ahci_init() == 0) {
         use_ahci = 1;
         if (read_abs(0, sector) == 0) {

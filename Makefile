@@ -102,12 +102,14 @@ KERNEL_OBJS := \
 	$(BUILD_DIR)/kernel/mm/vmm.o \
 	$(BUILD_DIR)/kernel/drivers/ata.o \
 	$(BUILD_DIR)/kernel/drivers/ahci.o \
+	$(BUILD_DIR)/kernel/drivers/nvme.o \
 	$(BUILD_DIR)/kernel/drivers/ne2k.o \
 	$(BUILD_DIR)/kernel/drivers/vga.o \
 	$(BUILD_DIR)/kernel/drivers/fb.o \
 	$(BUILD_DIR)/kernel/drivers/kbd.o \
 	$(BUILD_DIR)/kernel/drivers/rtc.o \
 	$(BUILD_DIR)/kernel/drivers/pci.o \
+	$(BUILD_DIR)/kernel/drivers/uhci.o \
 	$(BUILD_DIR)/kernel/fs/fat.o \
 	$(BUILD_DIR)/kernel/vfs/vfs.o \
 	$(BUILD_DIR)/kernel/syscall/syscall.o \
