@@ -10,6 +10,7 @@
 #include <gw/vfs.h>
 #include <gw/syscall.h>
 #include <gw/vmm.h>
+#include <gw/fb.h>
 #include <gw/process.h>
 #include <gw/fat.h>
 #include <gw/pkg.h>
@@ -60,6 +61,7 @@ void kmain(GW_BOOT_INFO *boot_info) {
         for (;;) __asm__ volatile ("cli; hlt");
     }
     vmm_load();
+    fb_init(boot_info);
     serial_write("\n");
     if (vfs_init() != 0) {
         serial_write("FATAL: VFS\n");

@@ -4,6 +4,7 @@
 
 #include <gw/fat.h>
 #include <gw/ata.h>
+#include <gw/ahci.h>
 #include <gw/serial.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -61,10 +62,14 @@ static void print_83(const char name[11]) {
     }
 }
 
+static int use_ahci;
+
 static int read_abs(uint32_t lba, void *buf) {
+    if (use_ahci) return ahci_read(lba, 1, buf);
     return ata_read_sectors(lba, 1, buf);
 }
 static int write_abs(uint32_t lba, const void *buf) {
+    if (use_ahci) return ahci_write(lba, 1, buf);
     return ata_write_sectors(lba, 1, buf);
 }
 static uint32_t cluster_to_lba(uint32_t cl) {
@@ -239,7 +244,16 @@ static int resolve_full(const char *path, uint32_t *cl, uint32_t *sz, int *isdir
 
 int fat_mount(void) {
     mounted = 0;
-    if (ata_init() != 0) return -1;
+    use_ahci = 0;
+    if (ata_init() != 0) {
+        if (ahci_init() != 0) return -1;
+        use_ahci = 1;
+        serial_write("FAT: using AHCI backend\n");
+    } else {
+        serial_write("FAT: using ATA PIO backend\n");
+        /* still probe AHCI for info on modern boards */
+        ahci_init();
+    }
     if (read_abs(0, sector) != 0) return -1;
     if (sector[510] != 0x55 || sector[511] != 0xAA) return -1;
 

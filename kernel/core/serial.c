@@ -1,5 +1,6 @@
 #include <gw/serial.h>
 #include <gw/vga.h>
+#include <gw/fb.h>
 #include <stddef.h>
 
 #define COM1 0x3F8
@@ -27,6 +28,7 @@ void serial_init(void) {
 
 void serial_putc(char c) {
     vga_putc(c);
+    fb_putc(c);
     int spins = 0;
     while (!(inb(COM1 + 5) & 0x20) && spins++ < 100000)
         ;

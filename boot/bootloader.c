@@ -349,6 +349,32 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     boot_info->kernel_physical_base = kernel_base;
     boot_info->kernel_entry = kernel_entry;
 
+    /* Graphics Output Protocol — required for real hardware display after ExitBootServices */
+    {
+        EFI_GRAPHICS_OUTPUT_PROTOCOL *gop = NULL;
+        status = SystemTable->BootServices->LocateProtocol(
+            (EFI_GUID *)&EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID, NULL, (void **)&gop);
+        if (!EFI_ERROR(status) && gop && gop->Mode) {
+            boot_info->framebuffer_base = gop->Mode->FrameBufferBase;
+            boot_info->framebuffer_size = (uint64_t)gop->Mode->FrameBufferSize;
+            if (gop->Mode->Info) {
+                boot_info->framebuffer_width = gop->Mode->Info->HorizontalResolution;
+                boot_info->framebuffer_height = gop->Mode->Info->VerticalResolution;
+                boot_info->framebuffer_pitch = gop->Mode->Info->PixelsPerScanLine * 4;
+                boot_info->framebuffer_bpp = 32;
+            }
+            efi_print(SystemTable, L"GOP framebuffer: ");
+            efi_print_hex(SystemTable, boot_info->framebuffer_base);
+            efi_print(SystemTable, L" ");
+            efi_print_dec(SystemTable, boot_info->framebuffer_width);
+            efi_print(SystemTable, L"x");
+            efi_print_dec(SystemTable, boot_info->framebuffer_height);
+            efi_print(SystemTable, L"\r\n");
+        } else {
+            efi_print(SystemTable, L"GOP not available — kernel will try VGA text\r\n");
+        }
+    }
+
     /* Get memory map */
     status = get_memory_map(SystemTable, &mmap, &mmap_size, &mmap_key, &desc_size, &desc_ver);
     if (EFI_ERROR(status)) {
