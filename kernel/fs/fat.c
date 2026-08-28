@@ -245,16 +245,20 @@ static int resolve_full(const char *path, uint32_t *cl, uint32_t *sz, int *isdir
 int fat_mount(void) {
     mounted = 0;
     use_ahci = 0;
-    if (ata_init() != 0) {
-        if (ahci_init() != 0) return -1;
+    /* Prefer AHCI on modern hardware; fall back to legacy ATA PIO */
+    if (ahci_init() == 0) {
         use_ahci = 1;
-        serial_write("FAT: using AHCI backend\n");
-    } else {
-        serial_write("FAT: using ATA PIO backend\n");
-        /* still probe AHCI for info on modern boards */
-        ahci_init();
+        if (read_abs(0, sector) == 0) {
+            serial_write("FAT: using AHCI backend\n");
+            goto have_mbr;
+        }
+        serial_write("FAT: AHCI present but LBA0 read failed, trying ATA\n");
+        use_ahci = 0;
     }
+    if (ata_init() != 0) return -1;
+    serial_write("FAT: using ATA PIO backend\n");
     if (read_abs(0, sector) != 0) return -1;
+have_mbr:
     if (sector[510] != 0x55 || sector[511] != 0xAA) return -1;
 
     if (sector[0x1BE + 4] == 0xEE) {

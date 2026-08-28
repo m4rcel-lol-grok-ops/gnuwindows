@@ -200,21 +200,24 @@ static int ahci_rw(uint64_t lba, uint32_t count, void *buf, int write) {
     ch[3] = (uint32_t)((uintptr_t)ct_base >> 32);
 
     uint8_t *ct = ct_base;
-    for (int i = 0; i < 128; i++) ct[i] = 0;
-    /* CFIS */
-    ct[0] = write ? 0x35 : 0x25; /* DMA read/write ext */
-    ct[1] = 0x00;
-    ct[2] = 0x80; /* command */
-    ct[3] = 0;
+    for (int i = 0; i < 256; i++) ct[i] = 0;
+    /* Register Host-to-Device FIS (type 0x27) */
+    ct[0] = 0x27;
+    ct[1] = 0x80; /* C=1: update command register */
+    ct[2] = write ? 0x35 : 0x25; /* WRITE/READ DMA EXT */
+    ct[3] = 0; /* features */
     ct[4] = (uint8_t)(lba);
     ct[5] = (uint8_t)(lba >> 8);
     ct[6] = (uint8_t)(lba >> 16);
-    ct[7] = 0x40; /* LBA mode */
+    ct[7] = 0x40; /* device: LBA */
     ct[8] = (uint8_t)(lba >> 24);
     ct[9] = (uint8_t)(lba >> 32);
     ct[10] = (uint8_t)(lba >> 40);
+    ct[11] = 0; /* features exp */
     ct[12] = (uint8_t)count;
     ct[13] = (uint8_t)(count >> 8);
+    ct[14] = 0;
+    ct[15] = 0; /* control */
 
     /* PRDT entry at offset 0x80 */
     uint32_t *prd = (uint32_t *)(ct + 0x80);
